@@ -55,7 +55,11 @@ modelTurnout <- function(df) {
 
 modelThreeParty <- function(df) {
   print("-- fitting third party support model --")
-  glmer(paste("vto ~ o.pct + (1 + o.pct|race_eth) +", randomEffectString),
+  glmer(vto ~ o.pct + (1 + o.pct|race_eth) +
+          (1|age4) +
+          (1|edu5) +
+          (1|sex) +
+          (1|state),
         df, family = binomial)
 }
 
