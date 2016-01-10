@@ -22,8 +22,8 @@ getModels <- function(data, force = F) {
   if (!file.exists(path) || force) {
     model <- list(
       turnout = modelTurnout(data$cps),
-      twoParty = modelTwoParty(data$polls),
-      threeParty = modelThreeParty(filter(data$polls, !vto))
+      twoParty = modelTwoParty(filter(data$polls, !vto)),
+      threeParty = modelThreeParty(data$polls)
     )
     saveRDS(model, "out/model.rds", compress = F)
   }
