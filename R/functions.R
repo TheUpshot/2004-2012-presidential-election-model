@@ -17,15 +17,15 @@ getAdjust <- function(df, target, initial, weights) {
     pmax(-1)
 }
 
-getModels <- function(data, force = F) {
-  path <- "out/model.rds"
+getModels <- function(data, year, force = F) {
+  path <- sprintf("out/model-%s.rds", year)
   if (!file.exists(path) || force) {
     model <- list(
       turnout = modelTurnout(data$cps),
-      twoParty = modelTwoParty(filter(data$polls, !vto)),
+      twoParty = modelTwoParty(filter(data$polls, !otherVote)),
       threeParty = modelThreeParty(data$polls)
     )
-    saveRDS(model, "out/model.rds", compress = F)
+    saveRDS(model, path, compress = F)
   }
   readRDS(path)
 }
@@ -55,7 +55,7 @@ modelTurnout <- function(df) {
 
 modelThreeParty <- function(df) {
   print("-- fitting third party support model --")
-  glmer(vto ~ o.pct + (1 + o.pct|race_eth) +
+  glmer(otherVote ~ otherPartyShare + (1 + otherPartyShare|race_eth) +
           (1|age4) +
           (1|edu5) +
           (1|sex) +
@@ -65,25 +65,24 @@ modelThreeParty <- function(df) {
 
 modelTwoParty <- function(df) {
   print("-- fitting two party support model --")
-  glmer(paste("vtd ~ d2pv.12 + (1 + d2pv.12|race_eth) +", randomEffectString),
+  glmer(demVote ~ demTwoPartyShare + (1 + demTwoPartyShare|race_eth) +
+          (1|age4) +
+          (1|edu5) +
+          (1|region) +
+          (1|sex) +
+          (1|state) +
+          (1|race_eth:age4) +
+          (1|race_eth:edu5) +
+          (1|race_eth:region) +
+          (1|race_eth:sex) +
+          (1|race_eth:state) +
+          (1|race_eth:new.subregion) +
+          (1|region:age4) +
+          (1|region:edu5) +
+          (1|state:age4) +
+          (1|state:edu5) +
+          (1|race_eth:age4:region) +
+          (1|race_eth:edu5:region),
         df, family = binomial)
 }
 
-randomEffectString <- alist(age4,
-                            edu5,
-                            region,
-                            sex,
-                            state,
-                            race_eth:age4,
-                            race_eth:edu5,
-                            race_eth:region,
-                            race_eth:sex,
-                            race_eth:state,
-                            race_eth:new.subregion,
-                            region:age4,
-                            region:edu5,
-                            state:age4,
-                            state:edu5,
-                            race_eth:age4:region,
-                            race_eth:edu5:region) %>%
-  paste0("(1|", ., ")", collapse = " + ")
