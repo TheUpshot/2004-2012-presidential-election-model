@@ -20,7 +20,7 @@ data <- datasets %>%
 ### load / fit models
 model <- getModels(data)
 
-acs <- cbind(data$acs, sapply(model, predict, data$acs))
+acs <- cbind(data$acs, sapply(model, predict, data$acs, allow.new.levels = T))
 
 ### predict initial support and turnout models
 fits <- acs %>%
