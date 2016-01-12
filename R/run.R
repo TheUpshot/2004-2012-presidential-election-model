@@ -10,7 +10,7 @@ library(readr)
 source("R/functions.R")
 
 #### load data
-year <- 2004
+year <- 2012
 
 datasets <- c("acs", "cps", "polls")
 
@@ -22,7 +22,8 @@ data <- datasets %>%
 ### load / fit models
 model <- getModels(data, year)
 
-acs <- cbind(data$acs, sapply(model, predict, data$acs, allow.new.levels = T))
+acs <- cbind(data$acs, sapply(model, predict, data$acs,
+                              allow.new.levels = T))
 
 ### predict initial support and turnout models
 fits <- acs %>%

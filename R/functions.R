@@ -55,7 +55,7 @@ modelTurnout <- function(df) {
 
 modelThreeParty <- function(df) {
   print("-- fitting third party support model --")
-  glmer(otherVote ~ otherPartyShare + (1 + otherPartyShare|race_eth) +
+  glmer(otherVote ~ otherVoteShare + (1 + otherVoteShare|race_eth) +
           (1|age4) +
           (1|edu5) +
           (1|sex) +
