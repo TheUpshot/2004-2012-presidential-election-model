@@ -25,7 +25,7 @@ getModels <- function(data, year, force = F) {
       twoParty = modelTwoParty(filter(data$polls, !otherVote)),
       threeParty = modelThreeParty(data$polls)
     )
-    saveRDS(model, path, compress = F)
+    saveRDS(model, path)
   }
   readRDS(path)
 }
@@ -85,4 +85,3 @@ modelTwoParty <- function(df) {
           (1|race_eth:edu5:region),
         df, family = binomial)
 }
-
