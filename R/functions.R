@@ -1,20 +1,31 @@
-adjust <- function(df, target, initial, weights) {
-  suppressWarnings(df %>%
+adjust <- function(df, ...) {
+
+  # parse function arguments
+  lazyDots <- lazyeval::lazy_dots(...)
+  arg <- deparse(first(lazyDots)$expr) %>%
+    gsub("^plogis|[()*+]", "", .) %>%
+    strsplit(" +") %>%
+    first() %>%
+    setNames(c("target", "offset", "weight"))
+
+  # calculate adjustment
+  df %>%
     group_by(state) %>%
-    do(adjust = getAdjust(., target, .[[initial]], .[[weights]])) %>%
-    mutate(adjust = as.numeric(adjust)) %>%
-    right_join(select(df, -adjust)))
+    rename_(.dots = as.list(arg)) %>%
+    summarize(adj = optimize(objective, c(-1, 1), target,
+                          offset, weight)$minimum) %>%
+    rename_(.dots = setNames(list(~ adj), first(arg))) %>%
+    right_join(select(df, -matches(first(arg)))) %>%
+    mutate_(.dots = lazyDots)
+
 }
 
-getAdjust <- function(df, target, initial, weights) {
-  paste(target, "~ 1") %>%
-    as.formula %>%
-    glm(family = binomial, data = df, weights = weights,
-        offset = initial, model = F) %>%
-    extract("coefficients") %>%
-    first %>%
-    pmin(1) %>%
-    pmax(-1)
+getData <- function(year) {
+  datasets <- c("acs", "cps", "polls")
+  datasets %>%
+    sprintf("data/%s/%s.csv", year, .) %>%
+    lapply(read_csv) %>%
+    setNames(datasets)
 }
 
 getModels <- function(data, year, force = F) {
@@ -85,3 +96,8 @@ modelTwoParty <- function(df) {
           (1|race_eth:edu5:region),
         df, family = binomial)
 }
+
+objective <- function(x, target, offset, weight) {
+  abs(sum(weight * target) - sum(weight * plogis(offset + x)))
+}
+

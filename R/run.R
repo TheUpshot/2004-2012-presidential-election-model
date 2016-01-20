@@ -3,52 +3,39 @@ rm(list = ls())
 ### packages
 library(dplyr)
 library(ggplot2)
-library(magrittr)
 library(lme4)
 library(readr)
 
 ### functions
 source("R/functions.R")
 
-getFit <- function(year, force = F) {
+getFits <- function(year, data, force = F) {
 
-  datasets <- c("acs", "cps", "polls")
+  d <- data[[as.character(year)]]
 
-  data <- datasets %>%
-    sprintf("data/%s/%s.csv", year, .) %>%
-    lapply(read_csv) %>%
-    setNames(datasets)
+  # load / fit models
+  model <- getModels(d, year, force)
+  acs <- sapply(model, predict, d$acs, allow.new.levels = T) %>%
+    cbind(d$acs) %>%
+    mutate(year = year)
 
-  ### load / fit models
-  model <- getModels(data, year, force)
-
-  acs <- cbind(data$acs, sapply(model, predict, data$acs,
-                                allow.new.levels = T))
-
-  ### predict initial support and turnout models
-  fits <- acs %>%
-    mutate(adjust = 0, year = year) %>%
-
-    adjust("turnout.acs.cvap", "turnout", "Freq") %>%
-    mutate(turnoutFinal = plogis(turnout + adjust) * Freq) %>%
-
-    adjust("otherVoteShare", "threeParty", "turnoutFinal") %>%
-    mutate(minorFinal = plogis(threeParty + adjust) * turnoutFinal,
-           majorFinal = turnoutFinal - minorFinal) %>%
-
-    adjust("demTwoPartyShare", "twoParty", "majorFinal") %>%
-    mutate(demFinal = plogis(twoParty + adjust) * majorFinal,
-           repFinal = majorFinal - demFinal) %>%
-
-    ungroup %>%
-    mutate_each(funs(divide_by(., turnoutFinal)),
-                demFinal, repFinal, minorFinal)
+  # predict initial support and turnout models
+  acs %>%
+    adjust(turnoutFinal = plogis(turnout.acs.cvap + turnout) * Freq) %>%
+    adjust(minorFinal = plogis(otherVoteShare + threeParty) * turnoutFinal) %>%
+    mutate(majorFinal = turnoutFinal - minorFinal) %>%
+    adjust(demFinal = plogis(demTwoPartyShare + twoParty) * majorFinal) %>%
+    mutate(repFinal = majorFinal - demFinal) %>%
+    mutate_each(funs(. / turnoutFinal), demFinal, repFinal, minorFinal)
 
 }
 
+# load data
+years <- setNames(nm = c(2004, 2012))
+data <- sapply(years, getData, simplify = F)
+
 # fit models
-fits <- c(2004, 2012) %>%
-  sapply(getFit) %>%
+fits <- sapply(years, getFits, data) %>%
   bind_rows()
 
 # get summary stats
